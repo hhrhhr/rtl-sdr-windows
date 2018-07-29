@@ -1,0 +1,11 @@
+--- ./src/Makefile.am.orig	2018-07-29 03:24:19.119486200 +0300
++++ ./src/Makefile.am	2018-07-29 03:43:05.544224800 +0300
+@@ -10,7 +10,7 @@
+ lib_LTLIBRARIES = librtlsdr.la
+ 
+ librtlsdr_la_SOURCES = librtlsdr.c tuner_e4k.c tuner_fc0012.c tuner_fc0013.c tuner_fc2580.c tuner_r82xx.c
+-librtlsdr_la_LDFLAGS = -version-info $(LIBVERSION)
++librtlsdr_la_LDFLAGS = -version-info $(LIBVERSION) -no-undefined
+ 
+ bin_PROGRAMS         = rtl_sdr rtl_tcp rtl_test rtl_fm rtl_eeprom rtl_adsb rtl_power
+ 

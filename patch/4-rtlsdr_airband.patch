@@ -1,0 +1,160 @@
+################################################################################
+# cherry-pick from unstable
+################################################################################
+
+diff -ruN a/config.cpp b/config.cpp
+--- a/config.cpp	2018-02-16 20:31:43.000000000 +0300
++++ b/config.cpp	2018-07-29 09:25:18.930274900 +0300
+@@ -118,7 +118,7 @@
+ 			pdata->continuous = outs[o].exists("continuous") ?
+ 				(bool)(outs[o]["continuous"]) : false;
+ 			pdata->server = outs[o].exists("server") ? strdup(outs[o]["server"]) : NULL;
+-			pdata->name = strdup(outs[o].exists("name") ? outs[o]["name"] : "rtl_airband");
++			pdata->name = outs[o].exists("name") ? strdup(outs[o]["name"]) : "rtl_airband";
+ 			pdata->sink = outs[o].exists("sink") ? strdup(outs[o]["sink"]) : NULL;
+ 
+ 			if (outs[o].exists("stream_name")) {
+
+
+################################################################################
+# for asprintf
+################################################################################
+
+diff -ruN a/input-common.cpp b/input-common.cpp
+--- a/input-common.cpp	2018-02-16 20:31:43.000000000 +0300
++++ b/input-common.cpp	2018-07-29 08:57:21.174524900 +0300
+@@ -18,6 +18,10 @@
+  * along with this program. If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
++#ifdef __MINGW32__
++#define _GNU_SOURCE 1
++#endif
++
+ #include <iostream>
+ #include <assert.h>
+ #include <dlfcn.h>  		// dlopen, dlsym
+
+
+################################################################################
+# mingw can't link to unexported functions
+################################################################################
+
+diff -ruN a/input-common.h b/input-common.h
+--- a/input-common.h	2018-02-16 20:31:43.000000000 +0300
++++ b/input-common.h	2018-07-29 08:59:24.004154800 +0300
+@@ -21,7 +21,12 @@
+ #define _INPUT_COMMON_H 1
+ #include <pthread.h>
+ #include <libconfig.h++>
++
++#ifndef __MINGW32__
+ #define MODULE_EXPORT extern "C"
++#else
++#define MODULE_EXPORT extern "C" __declspec(dllexport)
++#endif
+ 
+ typedef enum {
+ 	SFMT_UNDEF = 0,
+
+
+################################################################################
+# fix 'unknown conversion type character ‘z’ in format'
+################################################################################
+
+diff -ruN a/input-helpers.cpp b/input-helpers.cpp
+--- a/input-helpers.cpp	2018-02-16 20:31:43.000000000 +0300
++++ b/input-helpers.cpp	2018-07-29 05:56:46.772525000 +0300
+@@ -18,6 +18,10 @@
+  * along with this program. If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
++#ifdef __MINGW32__
++#define __USE_MINGW_ANSI_STDIO 1
++#endif
++
+ #include <string.h>		// memcpy
+ #include <pthread.h>		// pthread_mutex_lock, unlock
+ #include "input-common.h"	// input_t
+
+
+################################################################################
+# workaround for sighandler, signals and fork()
+################################################################################
+
+diff -ruN a/rtl_airband.cpp b/rtl_airband.cpp
+--- a/rtl_airband.cpp	2018-02-16 20:31:43.000000000 +0300
++++ b/rtl_airband.cpp	2018-07-29 23:16:14.927733400 +0300
+@@ -46,7 +46,13 @@
+ #include <sys/stat.h>
+ #include <sys/time.h>
+ #include <fcntl.h>
++
++#ifndef __MINGW32__
+ #include <sys/wait.h>
++#else
++#include <windows.h>
++#endif
++
+ #include <algorithm>
+ #include <csignal>
+ #include <cstdarg>
+@@ -97,10 +103,22 @@
+ pthread_cond_t	mp3_cond = PTHREAD_COND_INITIALIZER;
+ pthread_mutex_t	mp3_mutex = PTHREAD_MUTEX_INITIALIZER;
+ 
++#ifndef __MINGW32__
+ void sighandler(int sig) {
+ 	log(LOG_NOTICE, "Got signal %d, exiting\n", sig);
+ 	do_exit = 1;
+ }
++#else
++BOOL WINAPI sighandler(int signum) {
++	if (CTRL_C_EVENT == signum) {
++		fprintf(stderr, "Signal caught, exiting!\n");
++		do_exit = 1;
++		return TRUE;
++	}
++	return FALSE;
++}
++#endif
++
+ 
+ void* controller_thread(void* params) {
+ 	device_t *dev = (device_t*)params;
+@@ -738,6 +756,8 @@
+ 			cerr<<"Configuration error: no devices defined\n";
+ 			error();
+ 		}
++
++#ifndef __MINGW32__
+ 		struct sigaction sigact, pipeact;
+ 
+ 		memset(&sigact, 0, sizeof(sigact));
+@@ -749,6 +769,9 @@
+ 		sigaction(SIGINT, &sigact, NULL);
+ 		sigaction(SIGQUIT, &sigact, NULL);
+ 		sigaction(SIGTERM, &sigact, NULL);
++#else
++		SetConsoleCtrlHandler( (PHANDLER_ROUTINE) sighandler, TRUE );
++#endif
+ 
+ 		devices = (device_t *)XCALLOC(device_count, sizeof(device_t));
+ 		shout_init();
+@@ -795,6 +818,8 @@
+ 	}
+ 
+ 	log(LOG_INFO, "RTLSDR-Airband version %s starting\n", RTL_AIRBAND_VERSION);
++
++#ifndef __MINGW32__ // Fork Were Nowhere Near the Windows
+ 	if(!foreground) {
+ 		int pid1, pid2;
+ 		if((pid1 = fork()) == -1) {
+@@ -834,6 +859,7 @@
+ 			}
+ 		}
+ 	}
++#endif
+ 
+ 	for (int i = 0; i < mixer_count; i++) {
+ 		if(mixers[i].enabled == false)
