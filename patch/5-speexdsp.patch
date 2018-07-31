@@ -1,0 +1,11 @@
+--- ./libspeexdsp/Makefile.am.orig	2018-07-31 19:46:07.694832125 +0300
++++ ./libspeexdsp/Makefile.am	2018-07-31 19:42:09.243314174 +0300
+@@ -29,7 +29,7 @@
+ 	pseudofloat.h smallft.h vorbis_psy.h resample_sse.h resample_neon.h
+ 
+ libspeexdsp_la_LDFLAGS = -no-undefined -version-info @SPEEXDSP_LT_CURRENT@:@SPEEXDSP_LT_REVISION@:@SPEEXDSP_LT_AGE@
+-libspeexdsp_la_LIBADD = $(LIBM)
++libspeexdsp_la_LIBADD = $(LIBM) @FFT_LIBS@
+ 
+ if BUILD_EXAMPLES
+ noinst_PROGRAMS = testdenoise testecho testjitter testresample testresample2
