@@ -82,7 +82,7 @@ diff -ruN a/input-helpers.cpp b/input-helpers.cpp
 # enable binary mode (otherwise Windows replaces all '\n' by '\r\n'.)
 ################################################################################
 
-diff -ruN a/rtl_airband.cpp b/rtl_airband.cpp
+diff -ruN a/output.cpp b/output.cpp
 --- a/output.cpp
 +++ b/output.cpp
 @@ -198,11 +198,11 @@
